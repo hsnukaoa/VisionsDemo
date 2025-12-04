@@ -20,6 +20,8 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     // SwiftUI側に画像を返すクロージャ
     var onPhotoCaptured: ((UIImage) -> Void)?
     
+    let vision = VisionController()
+    
     //画面が初めて表示されたときに呼ばれる関数。ここで初期設定をしている
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -42,7 +44,6 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         }
         
         do {
-            //TODO: 入出力設定の仕組みについて詳しく調べる
             let input = try AVCaptureDeviceInput(device: camera)
             if captureSession.canAddInput(input) {
                 captureSession.addInput(input)
@@ -60,8 +61,10 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
             previewLayer.frame = view.bounds
             view.layer.addSublayer(previewLayer)
             
-            //カメラ起動
-            captureSession.startRunning()
+            //カメラ起動処理(DispatchQueueを使用することでバックグラウンドスレッドに移動し、UIのフリーズを防ぐ)
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.captureSession.startRunning()
+            }
         } catch {
             print("Camera setup error: \(error)")
         }
@@ -80,7 +83,7 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         shutterButton.addTarget(self, action: #selector(takePhoto), for: .touchUpInside)
         view.addSubview(shutterButton)
         
-        //TODO: NSLayoutConstraintについて調べる
+        //レイアウトをルールで表現する仕組み
         NSLayoutConstraint.activate([
             shutterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             shutterButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -60),
@@ -108,10 +111,12 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
             return
         }
         
-        // SwiftUIに画像を返す
-        onPhotoCaptured?(image)
-        //カメラ画面を閉じる
-        dismiss(animated: true)
+        vision.detectAndDrawFaceLandmarks(on: image) { [weak self] processedImage in
+                DispatchQueue.main.async {
+                    self?.onPhotoCaptured?(processedImage ?? image)
+                    self?.dismiss(animated: true)
+                }
+            }
     }
     
     //画面が閉じられた時の後処理担当
@@ -121,3 +126,4 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         captureSession.stopRunning()
     }
 }
+
