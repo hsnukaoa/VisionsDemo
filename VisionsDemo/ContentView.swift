@@ -10,9 +10,10 @@ import SwiftUI
 struct ContentView: View {
     @State private var capturedImage: UIImage? = nil
     @State private var showCamera = false
+    @State private var eyeImage: UIImage? = nil
 
     var body: some View {
-        VStack {
+        ScrollView {
             if let image = capturedImage {
                 // 撮影＋描画後の画像を表示
                 Image(uiImage: image)
@@ -21,6 +22,14 @@ struct ContentView: View {
                     .frame(maxHeight: 500)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding()
+                
+                if let lefteyeImage = eyeImage {
+                    Image(uiImage: lefteyeImage)
+                        .resizable()
+                        .scaledToFit()
+                        .padding()
+
+                }
             } else {
                 // 初期状態
                 Text("セルフィーを撮影して顔の輪郭線を描画します")
@@ -41,7 +50,7 @@ struct ContentView: View {
             .padding()
         }
         .sheet(isPresented: $showCamera) {
-            CameraViewControllerRepresentable(capturedImage: $capturedImage)
+            CameraViewControllerRepresentable(capturedImage: $capturedImage, eyeImage: $eyeImage)
         }
     }
 }

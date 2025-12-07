@@ -19,6 +19,7 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     // SwiftUI側に画像を返すクロージャ
     var onPhotoCaptured: ((UIImage) -> Void)?
+    var onDetectLeftEyeImage: ((UIImage) -> Void)?
     
     let vision = VisionController()
     
@@ -99,7 +100,14 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
     
-    // 撮影完了時に呼ばれる
+    
+    //画面が閉じられた時の後処理担当
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        //カメラを停止して、リソースを解放する
+        captureSession.stopRunning()
+    }
+    
     func photoOutput(_ output: AVCapturePhotoOutput,
                      didFinishProcessingPhoto photo: AVCapturePhoto,
                      error: Error?) {
@@ -111,19 +119,32 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
             return
         }
         
-        vision.detectAndDrawFaceLandmarks(on: image) { [weak self] processedImage in
-                DispatchQueue.main.async {
-                    self?.onPhotoCaptured?(processedImage ?? image)
-                    self?.dismiss(animated: true)
+        // 修正: completionハンドラの引数を [FaceParts] に変更
+        vision.detectAndDrawFaceLandmarks(on: image) { [weak self] facePartsArray in
+            DispatchQueue.main.async {
+                
+                // 1. 検出結果から、描画済みの画像を取得する
+                //    (顔が検出されなかった場合は元の画像を使用)
+                let imageToSend: UIImage
+                if let firstFace = facePartsArray.first {
+                    // 最初の顔のランドマーク描画済み画像を使用
+                    imageToSend = firstFace.originalWithDrawings
+                    
+                    // 【参考】ここで切り抜かれたパーツも利用できます。例:
+                    if let leftEye = firstFace.nose {
+                        // 左目の画像を使って何か処理を行う
+                        self?.onDetectLeftEyeImage?(leftEye)
+                    }
+                    
+                } else {
+                    // 顔が検出されなかった場合は元の画像を使用
+                    imageToSend = image
                 }
+                
+                self?.onPhotoCaptured?(imageToSend)
+                self?.dismiss(animated: true)
             }
-    }
-    
-    //画面が閉じられた時の後処理担当
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        //カメラを停止して、リソースを解放する
-        captureSession.stopRunning()
+        }
     }
 }
 
