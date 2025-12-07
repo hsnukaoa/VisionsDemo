@@ -10,7 +10,8 @@ import Vision
 import ImageIO
 
 /// 検出された顔と、そのパーツごとの画像をまとめる構造体
-struct FaceParts {
+struct FaceParts: Identifiable {
+    let id = UUID()
     var originalWithDrawings: UIImage // ランドマーク描画済みの画像
     var faceCropped: UIImage?         // 顔全体の切り抜き
     var leftEye: UIImage?             // 左目
@@ -160,37 +161,59 @@ final class VisionController {
     
     // MARK: - 切り抜き関連 (新規追加)
     
-    /// ランドマーク領域（目、鼻など）の点群を囲む最小の矩形を計算して切り抜く
+    /// ランドマーク領域（目、鼻など）をパスの形で切り抜く（背景透過）
     private func cropLandmarkRegion(on image: UIImage, faceBoundingBox: CGRect, region: VNFaceLandmarkRegion2D?) -> UIImage? {
         guard let region = region else { return nil }
         
         // 1. 正規化座標を画像の絶対座標(UIKit座標)に変換
+        //    (この計算は drawLandmarks と同じなので、画面上の見た目通りの位置が求まる)
         let points = region.normalizedPoints.map {
             CGPoint(
                 x: faceBoundingBox.origin.x + CGFloat($0.x) * faceBoundingBox.width,
-                // Y座標は反転させる（Visionは左下原点、UIKitは左上原点のため）
                 y: faceBoundingBox.origin.y + (1 - CGFloat($0.y)) * faceBoundingBox.height
             )
         }
         
-        // 2. 点群が含まれる最小の矩形（BoundingBox）を計算
-        var minX = CGFloat.greatestFiniteMagnitude
-        var minY = CGFloat.greatestFiniteMagnitude
-        var maxX = CGFloat.leastNormalMagnitude
-        var maxY = CGFloat.leastNormalMagnitude
+        guard let firstPoint = points.first else { return nil }
         
-        for point in points {
-            minX = min(minX, point.x)
-            minY = min(minY, point.y)
-            maxX = max(maxX, point.x)
-            maxY = max(maxY, point.y)
+        // 2. パスを作成
+        let path = UIBezierPath()
+        path.move(to: firstPoint)
+        for point in points.dropFirst() {
+            path.addLine(to: point)
+        }
+        path.close()
+        
+        // 3. パスのバウンディングボックスを取得（これが切り抜く画像のサイズ）
+        let cropRect = path.bounds
+        
+        // エッジケース対策: サイズが0ならnil
+        if cropRect.width <= 0 || cropRect.height <= 0 { return nil }
+        
+        // 4. 切り抜き用のコンテキストを作成
+        //    scaleをimage.scaleに合わせることで高画質を維持
+        UIGraphicsBeginImageContextWithOptions(cropRect.size, false, image.scale)
+        guard let context = UIGraphicsGetCurrentContext() else {
+            UIGraphicsEndImageContext()
+            return nil
         }
         
-        // 切り抜き範囲を作成 (widthやheightが負にならないよう安全策をとっても良い)
-        let cropRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        // 5. パスをコンテキストの原点(0,0)に合わせて移動させてクリップ
+        //    現在のパスは画像全体座標にあるので、cropRectのorigin分だけずらす
+        context.translateBy(x: -cropRect.origin.x, y: -cropRect.origin.y)
+        path.addClip()
         
-        // 3. 切り抜き実行
-        return image.crop(rect: cropRect)
+        // 6. 画像を描画
+        //    image.draw(at: .zero) だと、画像全体の左上が (0,0) に描画されるが、
+        //    contextは (-cropRect.origin) だけずれているので、
+        //    結果的に cropRect の部分が (0,0) に重なるように描画される。
+        image.draw(at: .zero)
+        
+        // 7. 画像を取得
+        let croppedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return croppedImage
     }
 }
 

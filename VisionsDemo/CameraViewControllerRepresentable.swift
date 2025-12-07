@@ -11,15 +11,15 @@ import UIKit
 
 struct CameraViewControllerRepresentable: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
-    @Binding var eyeImage: UIImage?
+    @Binding var faceParts: [FaceParts]
 
     func makeUIViewController(context: Context) -> CameraViewController {
         let vc = CameraViewController()
         vc.onPhotoCaptured = { image in
             capturedImage = image
         }
-        vc.onDetectLeftEyeImage = { image in
-            eyeImage = image
+        vc.onFacePartsDetected = { parts in
+            faceParts = parts
         }
         return vc
     }

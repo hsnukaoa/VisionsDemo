@@ -19,7 +19,7 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     // SwiftUI側に画像を返すクロージャ
     var onPhotoCaptured: ((UIImage) -> Void)?
-    var onDetectLeftEyeImage: ((UIImage) -> Void)?
+    var onFacePartsDetected: (([FaceParts]) -> Void)?
     
     let vision = VisionController()
     
@@ -129,17 +129,13 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
                 if let firstFace = facePartsArray.first {
                     // 最初の顔のランドマーク描画済み画像を使用
                     imageToSend = firstFace.originalWithDrawings
-                    
-                    // 【参考】ここで切り抜かれたパーツも利用できます。例:
-                    if let leftEye = firstFace.nose {
-                        // 左目の画像を使って何か処理を行う
-                        self?.onDetectLeftEyeImage?(leftEye)
-                    }
-                    
                 } else {
                     // 顔が検出されなかった場合は元の画像を使用
                     imageToSend = image
                 }
+                
+                // パーツ情報を返す
+                self?.onFacePartsDetected?(facePartsArray)
                 
                 self?.onPhotoCaptured?(imageToSend)
                 self?.dismiss(animated: true)
