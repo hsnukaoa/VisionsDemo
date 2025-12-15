@@ -11,7 +11,7 @@ struct ContentView: View {
     @State private var capturedImage: UIImage? = nil
     @State private var showCamera = false
     @State private var faceParts: [FaceParts] = []
-
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -78,7 +78,7 @@ struct ContentView: View {
                 }
             }
             .padding(.vertical)
-
+            
             Button {
                 showCamera = true
             } label: {
