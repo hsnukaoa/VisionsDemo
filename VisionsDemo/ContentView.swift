@@ -6,6 +6,13 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
+
+struct FacePartItem: Identifiable {
+    let id = UUID()
+    let image: UIImage
+    let title: String
+}
 
 struct ContentView: View {
     @State private var capturedImage: UIImage? = nil
@@ -25,7 +32,7 @@ struct ContentView: View {
                         .padding(.horizontal)
                     
                     if !faceParts.isEmpty {
-                        Text("Detected Parts")
+                        Text("分解したパーツ")
                             .font(.title2)
                             .bold()
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -37,22 +44,11 @@ struct ContentView: View {
                                     .font(.headline)
                                     .padding(.leading)
                                 
+                                //分解したFacePartsを表示
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 15) {
-                                        if let img = part.faceCropped {
-                                            PartView(image: img, title: "Face")
-                                        }
-                                        if let img = part.leftEye {
-                                            PartView(image: img, title: "Left Eye")
-                                        }
-                                        if let img = part.rightEye {
-                                            PartView(image: img, title: "Right Eye")
-                                        }
-                                        if let img = part.nose {
-                                            PartView(image: img, title: "Nose")
-                                        }
-                                        if let img = part.lips {
-                                            PartView(image: img, title: "Lips")
+                                        ForEach(part.items) { item in
+                                            PartView(image: item.image, title: item.title)
                                         }
                                     }
                                     .padding(.horizontal)
@@ -119,6 +115,20 @@ struct PartView: View {
         }
     }
 }
+
+extension FaceParts {
+    var items: [FacePartItem] {
+        [
+            faceCropped.map { FacePartItem(image: $0, title: "Face") },
+            leftEye.map { FacePartItem(image: $0, title: "Left Eye") },
+            rightEye.map { FacePartItem(image: $0, title: "Right Eye") },
+            nose.map { FacePartItem(image: $0, title: "Nose") },
+            lips.map { FacePartItem(image: $0, title: "Lips") }
+        ].compactMap { $0 }
+    }
+}
+
+
 
 #Preview {
     ContentView()

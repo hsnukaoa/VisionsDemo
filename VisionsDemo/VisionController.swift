@@ -35,13 +35,12 @@ final class VisionController {
             return
         }
         
-        // VNDetectFaceLandmarksRequestを作成する
+        // リクエストを作成する
         let request = VNDetectFaceLandmarksRequest { [weak self] request, error in
             guard let self = self else { return }
             
             // 検出結果が VNFaceObservation の配列で、空でないことを確認。
             guard let results = request.results as? [VNFaceObservation], !results.isEmpty else {
-                // エラー修正: ここで completion(image) を返すと型不一致エラーになります。
                 // 顔が見つからなかった場合は空配列 [] を返します。
                 completion([])
                 return
@@ -212,7 +211,7 @@ final class VisionController {
     }
 }
 
-extension UIImage {
+extension UIImage{
     var vnOrientation: CGImagePropertyOrientation {
         switch imageOrientation {
         case .up: return .up
