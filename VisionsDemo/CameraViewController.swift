@@ -10,9 +10,6 @@ import UIKit
 import AVFoundation
 
 class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
-    
-    //必須プロパティ
-    //動画の場合は、AVCapturePhotoOutputの代わりにAVCaptureVideoDataOutput()を設定する
     var captureSession = AVCaptureSession()
     var previewLayer:AVCaptureVideoPreviewLayer!
     var photoOutput = AVCapturePhotoOutput()
@@ -23,19 +20,16 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     let vision = VisionController()
     
-    //画面が初めて表示されたときに呼ばれる関数。ここで初期設定をしている
+    //初期設定
     override func viewDidLoad() {
         super.viewDidLoad()
-        //カメラを起動し、映像をプレビューに映すようにする
         setupCamera()
-        //撮影ボタンを作って配置するようにする
         setupUI()
     }
     
     //MARK: カメラのセットアップ
     private func setupCamera() {
         captureSession = AVCaptureSession()
-        //静止画撮影モードに設定
         captureSession.sessionPreset = .photo
         
         // フロントカメラを取得。見つからなかった場合はエラーを出して終了
@@ -119,12 +113,10 @@ class CameraViewController: UIViewController, AVCapturePhotoCaptureDelegate {
             return
         }
         
-        // 修正: completionハンドラの引数を [FaceParts] に変更
         vision.detectAndDrawFaceLandmarks(on: image) { [weak self] facePartsArray in
             DispatchQueue.main.async {
                 
-                // 1. 検出結果から、描画済みの画像を取得する
-                //    (顔が検出されなかった場合は元の画像を使用)
+                // 検出結果から、描画済みの画像を取得する
                 let imageToSend: UIImage
                 if let firstFace = facePartsArray.first {
                     // 最初の顔のランドマーク描画済み画像を使用

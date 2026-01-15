@@ -14,14 +14,14 @@ struct CameraViewControllerRepresentable: UIViewControllerRepresentable {
     @Binding var faceParts: [FaceParts]
 
     func makeUIViewController(context: Context) -> CameraViewController {
-        let vc = CameraViewController()
-        vc.onPhotoCaptured = { image in
+        let camera = CameraViewController()
+        camera.onPhotoCaptured = { image in
             capturedImage = image
         }
-        vc.onFacePartsDetected = { parts in
+        camera.onFacePartsDetected = { parts in
             faceParts = parts
         }
-        return vc
+        return camera
     }
 
     func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
